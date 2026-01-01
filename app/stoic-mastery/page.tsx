@@ -110,7 +110,7 @@ export default function StoicMasteryPage() {
               Stoic Mastery
             </h1>
             <p className="text-slate-300 italic mb-4">
-              "No man is free who is not master of himself" — Epictetus
+              &ldquo;No man is free who is not master of himself&rdquo; — Epictetus
             </p>
             <p className="text-slate-400 text-sm">
               Stop being managed by external desires. Inhabit the present moment.
@@ -229,6 +229,7 @@ export default function StoicMasteryPage() {
                 </div>
 
                 <button
+                  type="button"
                   onClick={handleSave}
                   className="w-full bg-slate-700 hover:bg-slate-600 text-white font-medium py-3 px-6 rounded-lg transition-colors"
                 >

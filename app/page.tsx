@@ -15,7 +15,7 @@ export default function Home() {
               A Stoic Practice for Daily Mastery
             </p>
             <p className="text-slate-400">
-              "No man is free who is not master of himself" — Epictetus
+              &ldquo;No man is free who is not master of himself&rdquo; — Epictetus
             </p>
           </header>
 
@@ -71,7 +71,7 @@ export default function Home() {
 
           <div className="text-center text-slate-400 text-sm">
             <p>
-              "Equanimity is best maintained by managing emotional extremes"
+              &ldquo;Equanimity is best maintained by managing emotional extremes&rdquo;
             </p>
           </div>
         </div>

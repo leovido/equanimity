@@ -65,8 +65,8 @@ export default function NightlyAuditPage() {
               The Nightly Audit
             </h1>
             <p className="text-slate-300 italic mb-4">
-              "Examine your spirit each night. What bad habits did you check?
-              How did you improve?" — Sextius
+              &ldquo;Examine your spirit each night. What bad habits did you check?
+              How did you improve?&rdquo; — Sextius
             </p>
             <p className="text-slate-400 text-sm">
               Practice happiness hygiene by reflecting on your day
@@ -127,6 +127,7 @@ export default function NightlyAuditPage() {
               </div>
 
               <button
+                type="button"
                 onClick={handleSave}
                 className="w-full bg-slate-700 hover:bg-slate-600 text-white font-medium py-3 px-6 rounded-lg transition-colors"
               >

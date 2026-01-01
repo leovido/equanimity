@@ -96,8 +96,8 @@ export default function InnerPeacePage() {
           <header className="mb-8">
             <h1 className="text-4xl font-bold text-white mb-2">Inner Peace</h1>
             <p className="text-slate-300 italic mb-4">
-              "Equanimity is best maintained by managing emotional extremes so
-              they do not manage you" — Seneca
+              &ldquo;Equanimity is best maintained by managing emotional extremes so
+              they do not manage you&rdquo; — Seneca
             </p>
             <p className="text-slate-400 text-sm">
               Reduce rumination and catastrophizing. Maintain emotional balance.
@@ -112,6 +112,7 @@ export default function InnerPeacePage() {
               {emotionalStates.map((state) => (
                 <button
                   key={state.value}
+                  type="button"
                   onClick={() => handleQuickCheck(state.value)}
                   className={`${state.color} text-white py-3 px-4 rounded-lg font-medium hover:opacity-80 transition-opacity text-sm`}
                 >
@@ -127,13 +128,14 @@ export default function InnerPeacePage() {
             </h2>
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <div className="block text-sm font-medium text-slate-300 mb-2">
                   Current Emotional State
-                </label>
+                </div>
                 <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
                   {emotionalStates.map((state) => (
                     <button
                       key={state.value}
+                      type="button"
                       onClick={() => setSelectedState(state.value)}
                       className={`py-2 px-3 rounded-lg font-medium text-sm transition-all ${
                         selectedState === state.value
@@ -216,6 +218,7 @@ export default function InnerPeacePage() {
               </div>
 
               <button
+                type="button"
                 onClick={handleSave}
                 className="w-full bg-slate-700 hover:bg-slate-600 text-white font-medium py-3 px-6 rounded-lg transition-colors"
               >
@@ -232,7 +235,7 @@ export default function InnerPeacePage() {
               <div className="space-y-3">
                 {todayEntries.map((entry, index) => (
                   <div
-                    key={index}
+                    key={`${entry.date}-${index}-${entry.emotionalState}`}
                     className="bg-slate-900/50 border border-slate-700 rounded-lg p-4"
                   >
                     <div className="flex items-center gap-3 mb-2">
