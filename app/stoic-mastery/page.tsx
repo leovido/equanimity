@@ -55,6 +55,7 @@ export default function StoicMasteryPage() {
     new Set()
   );
   const [saved, setSaved] = useState(false);
+  const [pastEntries, setPastEntries] = useState<MasteryEntry[]>([]);
 
   const todayKey = getTodayKey("stoic-mastery");
   const practicesKey = getTodayKey("stoic-practices");
@@ -74,6 +75,19 @@ export default function StoicMasteryPage() {
     if (completed) {
       setCompletedPractices(new Set(completed));
     }
+
+    // Load past entries (last 7 days)
+    const entries: MasteryEntry[] = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const key = `stoic-mastery-${date.toISOString().split("T")[0]}`;
+      const entry = getStorageItem<MasteryEntry>(key);
+      if (entry) {
+        entries.push(entry);
+      }
+    }
+    setPastEntries(entries);
   }, [todayKey, practicesKey]);
 
   const handleSave = () => {
@@ -85,6 +99,20 @@ export default function StoicMasteryPage() {
       practice,
     };
     setStorageItem(todayKey, entry);
+    
+    // Refresh past entries to show the newly saved entry
+    const entries: MasteryEntry[] = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const key = `stoic-mastery-${date.toISOString().split("T")[0]}`;
+      const savedEntry = getStorageItem<MasteryEntry>(key);
+      if (savedEntry) {
+        entries.push(savedEntry);
+      }
+    }
+    setPastEntries(entries);
+    
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
@@ -238,6 +266,63 @@ export default function StoicMasteryPage() {
               </div>
             </div>
           </div>
+
+          {pastEntries.length > 0 && (
+            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6">
+              <h2 className="text-2xl font-semibold text-white mb-4">
+                Recent Reflections
+              </h2>
+              <div className="space-y-4">
+                {pastEntries.map((entry, index) => (
+                  <div
+                    key={`${entry.date}-${index}`}
+                    className="bg-slate-900/50 border border-slate-700 rounded-lg p-4"
+                  >
+                    <p className="text-sm text-slate-400 mb-3">
+                      {new Date(entry.date).toLocaleDateString("en-US", {
+                        weekday: "long",
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </p>
+                    {entry.presentMoment && (
+                      <div className="mb-3">
+                        <p className="text-xs text-slate-500 mb-1">
+                          Present Moment:
+                        </p>
+                        <p className="text-slate-300">{entry.presentMoment}</p>
+                      </div>
+                    )}
+                    {entry.externalDesires && (
+                      <div className="mb-3">
+                        <p className="text-xs text-slate-500 mb-1">
+                          External Desires:
+                        </p>
+                        <p className="text-slate-300">{entry.externalDesires}</p>
+                      </div>
+                    )}
+                    {entry.selfControl && (
+                      <div className="mb-3">
+                        <p className="text-xs text-slate-500 mb-1">
+                          Self-Control:
+                        </p>
+                        <p className="text-slate-300">{entry.selfControl}</p>
+                      </div>
+                    )}
+                    {entry.practice && (
+                      <div>
+                        <p className="text-xs text-slate-500 mb-1">
+                          Practice Notes:
+                        </p>
+                        <p className="text-slate-300">{entry.practice}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
