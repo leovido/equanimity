@@ -9,13 +9,28 @@ interface AuditEntry {
   badHabitsChecked: string;
   improvements: string;
   reflection: string;
+  mode?: "personal" | "work";
+  categories?: string[];
+  sentiment?: {
+    score: number;
+    label: string;
+    explanation: string;
+  };
+  analyzedAt?: string;
 }
 
 export default function NightlyAuditPage() {
   const [badHabitsChecked, setBadHabitsChecked] = useState("");
   const [improvements, setImprovements] = useState("");
   const [reflection, setReflection] = useState("");
+  const [mode, setMode] = useState<"personal" | "work">("personal");
   const [saved, setSaved] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [currentAnalysis, setCurrentAnalysis] = useState<{
+    categories: string[];
+    sentiment: { score: number; label: string; explanation: string };
+  } | null>(null);
   const [pastEntries, setPastEntries] = useState<AuditEntry[]>([]);
 
   const todayKey = getTodayKey("nightly-audit");
@@ -27,6 +42,13 @@ export default function NightlyAuditPage() {
       setBadHabitsChecked(todayEntry.badHabitsChecked || "");
       setImprovements(todayEntry.improvements || "");
       setReflection(todayEntry.reflection || "");
+      setMode(todayEntry.mode || "personal");
+      if (todayEntry.categories && todayEntry.sentiment) {
+        setCurrentAnalysis({
+          categories: todayEntry.categories,
+          sentiment: todayEntry.sentiment,
+        });
+      }
     }
 
     // Load past entries (last 7 days)
@@ -43,16 +65,63 @@ export default function NightlyAuditPage() {
     setPastEntries(entries);
   }, [todayKey]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const entry: AuditEntry = {
       date: new Date().toISOString().split("T")[0],
       badHabitsChecked,
       improvements,
       reflection,
+      mode,
     };
     setStorageItem(todayKey, entry);
     setSaved(true);
+    setAnalysisError(null);
     setTimeout(() => setSaved(false), 3000);
+
+    // Analyze with AI
+    if (badHabitsChecked || improvements || reflection) {
+      setAnalyzing(true);
+      try {
+        const response = await fetch("/api/analyze-audit", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            badHabitsChecked,
+            improvements,
+            reflection,
+            mode,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: "Unknown error occurred" }));
+          throw new Error(errorData.error || `Failed to analyze reflection (${response.status})`);
+        }
+
+        const analysis = await response.json();
+        setCurrentAnalysis(analysis);
+
+        // Update entry with analysis results
+        const updatedEntry: AuditEntry = {
+          ...entry,
+          categories: analysis.categories,
+          sentiment: analysis.sentiment,
+          analyzedAt: new Date().toISOString(),
+        };
+        setStorageItem(todayKey, updatedEntry);
+      } catch (error) {
+        console.error("Analysis error:", error);
+        setAnalysisError(
+          error instanceof Error
+            ? error.message
+            : "Failed to analyze reflection. Please try again."
+        );
+      } finally {
+        setAnalyzing(false);
+      }
+    }
   };
 
   return (
@@ -75,6 +144,37 @@ export default function NightlyAuditPage() {
 
           <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6 mb-8">
             <div className="space-y-6">
+              {/* Mode Toggle */}
+              <div>
+                <div className="block text-sm font-medium text-slate-300 mb-2">
+                  Context Mode
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMode("personal")}
+                    className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                      mode === "personal"
+                        ? "bg-slate-700 text-white"
+                        : "bg-slate-900/50 text-slate-400 hover:bg-slate-900/70"
+                    }`}
+                  >
+                    Personal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode("work")}
+                    className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                      mode === "work"
+                        ? "bg-slate-700 text-white"
+                        : "bg-slate-900/50 text-slate-400 hover:bg-slate-900/70"
+                    }`}
+                  >
+                    Work
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label
                   htmlFor="bad-habits"
@@ -129,12 +229,82 @@ export default function NightlyAuditPage() {
               <button
                 type="button"
                 onClick={handleSave}
-                className="w-full bg-slate-700 hover:bg-slate-600 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+                disabled={analyzing}
+                className="w-full bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:cursor-not-allowed text-white font-medium py-3 px-6 rounded-lg transition-colors"
               >
-                {saved ? "✓ Saved" : "Save Reflection"}
+                {analyzing
+                  ? "Analyzing your reflection..."
+                  : saved
+                    ? "✓ Saved"
+                    : "Save Reflection"}
               </button>
+
+              {analysisError && (
+                <div className="bg-red-900/20 border border-red-700 rounded-lg p-4">
+                  <p className="text-red-400 text-sm">{analysisError}</p>
+                </div>
+              )}
+
+              {/* Category Tags */}
+              {currentAnalysis && currentAnalysis.categories.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-slate-300 mb-2">
+                    Categories
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {currentAnalysis.categories.map((category) => (
+                      <span
+                        key={`category-${category}`}
+                        className="px-3 py-1 bg-slate-700 text-slate-200 rounded-full text-sm"
+                      >
+                        {category}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
+
+          {/* Sentiment Analysis Section */}
+          {currentAnalysis?.sentiment && (
+            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6 mb-8">
+              <h2 className="text-2xl font-semibold text-white mb-4">
+                Sentiment Analysis
+              </h2>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-slate-300">
+                      {currentAnalysis.sentiment.label}
+                    </span>
+                    <span className="text-sm font-medium text-slate-300">
+                      {currentAnalysis.sentiment.score}/100
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-900/50 rounded-full h-3 overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-500 ${
+                        currentAnalysis.sentiment.score >= 70
+                          ? "bg-green-500"
+                          : currentAnalysis.sentiment.score >= 40
+                            ? "bg-yellow-500"
+                            : "bg-red-500"
+                      }`}
+                      style={{
+                        width: `${currentAnalysis.sentiment.score}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-400">
+                    {currentAnalysis.sentiment.explanation}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {pastEntries.length > 0 && (
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6">
@@ -144,17 +314,72 @@ export default function NightlyAuditPage() {
               <div className="space-y-4">
                 {pastEntries.map((entry, index) => (
                   <div
-                    key={index}
+                    key={`entry-${entry.date}-${index}`}
                     className="bg-slate-900/50 border border-slate-700 rounded-lg p-4"
                   >
-                    <p className="text-sm text-slate-400 mb-3">
-                      {new Date(entry.date).toLocaleDateString("en-US", {
-                        weekday: "long",
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                    </p>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-sm text-slate-400">
+                        {new Date(entry.date).toLocaleDateString("en-US", {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </p>
+                      {entry.mode && (
+                        <span className="text-xs px-2 py-1 bg-slate-700 text-slate-300 rounded-full">
+                          {entry.mode === "work" ? "Work" : "Personal"}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Categories */}
+                    {entry.categories && entry.categories.length > 0 && (
+                      <div className="mb-3">
+                        <div className="flex flex-wrap gap-2">
+                          {entry.categories.map((category, catIndex) => (
+                            <span
+                              key={`past-category-${entry.date}-${category}-${catIndex}`}
+                              className="px-2 py-1 bg-slate-800 text-slate-300 rounded-full text-xs"
+                            >
+                              {category}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Sentiment */}
+                    {entry.sentiment && (
+                      <div className="mb-3 p-3 bg-slate-800/50 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-medium text-slate-300">
+                            Sentiment: {entry.sentiment.label}
+                          </span>
+                          <span className="text-xs text-slate-400">
+                            {entry.sentiment.score}/100
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-900 rounded-full h-2 mb-2">
+                          <div
+                            className={`h-full ${
+                              entry.sentiment.score >= 70
+                                ? "bg-green-500"
+                                : entry.sentiment.score >= 40
+                                  ? "bg-yellow-500"
+                                  : "bg-red-500"
+                            }`}
+                            style={{
+                              width: `${entry.sentiment.score}%`,
+                            }}
+                          />
+                        </div>
+                        <p className="text-xs text-slate-400">
+                          {entry.sentiment.explanation}
+                        </p>
+                      </div>
+                    )}
+
                     {entry.badHabitsChecked && (
                       <div className="mb-3">
                         <p className="text-xs text-slate-500 mb-1">
