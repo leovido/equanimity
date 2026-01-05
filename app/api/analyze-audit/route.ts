@@ -1,15 +1,15 @@
-import { openai } from "@ai-sdk/openai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { generateText } from "ai";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
-    // Check if OpenAI API key is configured
-    if (!process.env.OPENAI_API_KEY) {
-      console.error("OPENAI_API_KEY is not set");
+    // Check if Google Generative AI API key is configured
+    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+      console.error("GOOGLE_GENERATIVE_AI_API_KEY is not set");
       return NextResponse.json(
         { 
-          error: "OpenAI API key is not configured. Please set OPENAI_API_KEY in your .env.local file." 
+          error: "Google Generative AI API key is not configured. Please set GOOGLE_GENERATIVE_AI_API_KEY in your .env.local file." 
         },
         { status: 500 }
       );
@@ -55,8 +55,12 @@ Return your response as a JSON object with this exact structure:
 
 Only return the JSON object, no additional text.`;
 
+    const googleProvider = createGoogleGenerativeAI({
+      apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+    });
+
     const result = await generateText({
-      model: openai("gpt-4o-mini"),
+      model: googleProvider("gemini-2.5-flash"),
       prompt,
     });
 
@@ -109,16 +113,16 @@ Only return the JSON object, no additional text.`;
     let errorMessage = "Failed to analyze reflection";
     if (error instanceof Error) {
       errorMessage = error.message;
-      // Check for common OpenAI API errors
+      // Check for common Gemini API errors
       const errorLower = error.message.toLowerCase();
       if (errorLower.includes("api key") || errorLower.includes("invalid")) {
-        errorMessage = "Invalid OpenAI API key. Please check your .env.local file.";
+        errorMessage = "Invalid Gemini API key. Please check your .env.local file.";
       } else if (errorLower.includes("rate limit") || errorLower.includes("rate_limit")) {
         errorMessage = "Rate limit exceeded. Please try again in a moment.";
       } else if (errorLower.includes("quota") || errorLower.includes("insufficient_quota") || errorLower.includes("exceeded your current quota")) {
-        errorMessage = "OpenAI API quota exceeded. Please check your billing and plan details at https://platform.openai.com/account/billing";
+        errorMessage = "Gemini API quota exceeded. Please check your billing and plan details at https://aistudio.google.com/app/apikey";
       } else if (errorLower.includes("billing")) {
-        errorMessage = "OpenAI billing issue. Please check your account billing details.";
+        errorMessage = "Gemini billing issue. Please check your account billing details.";
       }
     }
     

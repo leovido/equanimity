@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Navigation } from "@/components/navigation";
-import { getStorageItem, setStorageItem, getTodayKey } from "@/lib/storage";
+import { getStorageItem, setStorageItem, removeStorageItem, getTodayKey } from "@/lib/storage";
 
 interface AuditEntry {
   date: string;
@@ -35,6 +35,41 @@ export default function NightlyAuditPage() {
 
   const todayKey = getTodayKey("nightly-audit");
 
+  const reloadPastEntries = useCallback(() => {
+    const entries: AuditEntry[] = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const key = `nightly-audit-${date.toISOString().split("T")[0]}`;
+      const entry = getStorageItem<AuditEntry>(key);
+      if (entry) {
+        entries.push(entry);
+      }
+    }
+    setPastEntries(entries);
+  }, []);
+
+  const handleDeleteEntry = (entryDate: string) => {
+    if (confirm("Are you sure you want to delete this reflection? This action cannot be undone.")) {
+      const key = `nightly-audit-${entryDate}`;
+      removeStorageItem(key);
+      reloadPastEntries();
+    }
+  };
+
+  const handleClearToday = () => {
+    if (confirm("Are you sure you want to clear today's reflection? This action cannot be undone.")) {
+      removeStorageItem(todayKey);
+      setBadHabitsChecked("");
+      setImprovements("");
+      setReflection("");
+      setMode("personal");
+      setCurrentAnalysis(null);
+      setSaved(false);
+      reloadPastEntries(); // Refresh the recent reflections list
+    }
+  };
+
   useEffect(() => {
     // Load today's entry if it exists
     const todayEntry = getStorageItem<AuditEntry>(todayKey);
@@ -52,18 +87,8 @@ export default function NightlyAuditPage() {
     }
 
     // Load past entries (last 7 days)
-    const entries: AuditEntry[] = [];
-    for (let i = 0; i < 7; i++) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const key = `nightly-audit-${date.toISOString().split("T")[0]}`;
-      const entry = getStorageItem<AuditEntry>(key);
-      if (entry) {
-        entries.push(entry);
-      }
-    }
-    setPastEntries(entries);
-  }, [todayKey]);
+    reloadPastEntries();
+  }, [todayKey, reloadPastEntries]);
 
   const handleSave = async () => {
     const entry: AuditEntry = {
@@ -76,6 +101,7 @@ export default function NightlyAuditPage() {
     setStorageItem(todayKey, entry);
     setSaved(true);
     setAnalysisError(null);
+    reloadPastEntries(); // Refresh the recent reflections list
     setTimeout(() => setSaved(false), 3000);
 
     // Analyze with AI
@@ -111,6 +137,7 @@ export default function NightlyAuditPage() {
           analyzedAt: new Date().toISOString(),
         };
         setStorageItem(todayKey, updatedEntry);
+        reloadPastEntries(); // Refresh the recent reflections list with updated analysis
       } catch (error) {
         console.error("Analysis error:", error);
         setAnalysisError(
@@ -226,18 +253,31 @@ export default function NightlyAuditPage() {
                 />
               </div>
 
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={analyzing}
-                className="w-full bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:cursor-not-allowed text-white font-medium py-3 px-6 rounded-lg transition-colors"
-              >
-                {analyzing
-                  ? "Analyzing your reflection..."
-                  : saved
-                    ? "✓ Saved"
-                    : "Save Reflection"}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={analyzing}
+                  className="flex-1 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:cursor-not-allowed text-white font-medium py-3 px-6 rounded-lg transition-colors"
+                >
+                  {analyzing
+                    ? "Analyzing your reflection..."
+                    : saved
+                      ? "✓ Saved"
+                      : "Save Reflection"}
+                </button>
+                {(badHabitsChecked || improvements || reflection) && (
+                  <button
+                    type="button"
+                    onClick={handleClearToday}
+                    disabled={analyzing}
+                    className="bg-red-900/50 hover:bg-red-900/70 disabled:bg-slate-800 disabled:cursor-not-allowed text-red-300 font-medium py-3 px-6 rounded-lg transition-colors"
+                    title="Clear today's reflection"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
 
               {analysisError && (
                 <div className="bg-red-900/20 border border-red-700 rounded-lg p-4">
@@ -326,11 +366,21 @@ export default function NightlyAuditPage() {
                           day: "numeric",
                         })}
                       </p>
-                      {entry.mode && (
-                        <span className="text-xs px-2 py-1 bg-slate-700 text-slate-300 rounded-full">
-                          {entry.mode === "work" ? "Work" : "Personal"}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {entry.mode && (
+                          <span className="text-xs px-2 py-1 bg-slate-700 text-slate-300 rounded-full">
+                            {entry.mode === "work" ? "Work" : "Personal"}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteEntry(entry.date)}
+                          className="text-xs px-2 py-1 bg-red-900/50 hover:bg-red-900/70 text-red-300 rounded transition-colors"
+                          title="Delete this reflection"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
 
                     {/* Categories */}
