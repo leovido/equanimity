@@ -1,0 +1,20 @@
+pre-commit:
+  parallel: true
+  commands:
+    biome-check:
+      run: npm run biome:check .
+      stage_fixed: true
+    biome-format:
+      run: npm run biome:format .
+      stage_fixed: true
+
+pre-push:
+  parallel: true
+  commands:
+    type-check:
+      run: npm run type-check
+      glob: "*.{ts,tsx}"
+    test:
+      run: npm test -- --run
+      glob: "*.{ts,tsx,js,jsx}"
+

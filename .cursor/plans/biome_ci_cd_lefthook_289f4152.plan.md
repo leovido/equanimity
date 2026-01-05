@@ -4,24 +4,24 @@ overview: Set up Biome (replacing ESLint), Lefthook for git hooks, GitHub Action
 todos:
   - id: biome-setup
     content: Install Biome, create biome.json config, replace ESLint dependencies and config, update package.json scripts
-    status: pending
+    status: completed
   - id: lefthook-setup
     content: Install Lefthook, create .lefthook.yml with pre-commit and pre-push hooks, add prepare script to package.json
-    status: pending
+    status: completed
     dependencies:
       - biome-setup
   - id: vitest-setup
     content: Install Vitest and testing dependencies, create vitest.config.ts and setup file, add test scripts to package.json
-    status: pending
+    status: completed
   - id: github-actions
     content: Create .github/workflows/ci.yml with steps for lint, type-check, test, build, and SonarCloud integration
-    status: pending
+    status: completed
     dependencies:
       - biome-setup
       - vitest-setup
   - id: sonarcloud-config
     content: Create sonar-project.properties file with project configuration and exclusions
-    status: pending
+    status: completed
 ---
 
 # Setup Biome, CI/CD, and Lefthook
@@ -204,4 +204,3 @@ build-a-life/
 ## Notes
 
 - Biome will handle both linting and formatting, replacing ESLint and Prettier
-- Lefthook will run automatically on git operations after `npm install` (via prepare script)
